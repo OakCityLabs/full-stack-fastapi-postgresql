@@ -111,8 +111,6 @@ The input variables, with their default values (some auto generated) are:
 * `smtp_emails_from_email`: The email account to use as the sender in the notification emails, it would be something like `info@your-custom-domain.com`.
  
 * `postgres_password`: Postgres database password. Use the method above to generate it. (You could easily modify it to use MySQL, MariaDB, etc).
-* `pgadmin_default_user`: PGAdmin default user, to log-in to the PGAdmin interface.
-* `pgadmin_default_user_password`: PGAdmin default user password. Generate it with the method above.
  
 * `traefik_constraint_tag`: The tag to be used by the internal Traefik load balancer (for example, to divide requests between backend and frontend) for production. Used to separate this stack from any other stack you might have. This should identify each stack in each environment (production, staging, etc).
 * `traefik_constraint_tag_staging`: The Traefik tag to be used while on staging.

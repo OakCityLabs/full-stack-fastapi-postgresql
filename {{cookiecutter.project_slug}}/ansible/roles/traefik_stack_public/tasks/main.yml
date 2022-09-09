@@ -1,0 +1,45 @@
+- name: Get current node info
+  community.general.docker_node_info:
+    self: yes
+  register: swarm_node_info
+  when: traefik_ssl
+
+- name: Add label to node
+  community.general.docker_node:
+    hostname: "{{ swarm_node_info['nodes'][0]['ID'] }}"
+    labels:
+      traefik-public.traefik-public-certificates: "true"
+  when: traefik_ssl
+
+- name: Install traefik docker stack yml
+  copy:
+    src: "{{ 'traefik' if not traefik_ssl else 'traefik_ssl' }}.yml"
+    dest: /root/traefik.yml
+    mode: '0440'
+
+- name: Create a network
+  community.general.docker_network:
+    name: traefik-public
+    driver: overlay
+
+- name: Hash traefik admin password
+  debug:
+    msg: "hello {{ lookup('env', 'FIRST_SUPERUSER_PASSWORD') }}"
+
+- name: Hash traefik admin password
+  shell:
+    cmd: openssl passwd -apr1 {{ lookup('env', 'FIRST_SUPERUSER_PASSWORD') }}
+  register: hashed_password
+
+- name: Deploy traefik stack
+  community.general.docker_stack:
+    state: present
+    name: traefik
+    compose:
+      - /root/traefik.yml
+  environment:
+    EMAIL: "{{ first_superuser }}"
+    DOMAIN: traefik.{{ domain }}
+    USERNAME: admin
+    PASSWORD: "{{ lookup('env', 'FIRST_SUPERUSER_PASSWORD') }}"
+    HASHED_PASSWORD: "{{ hashed_password.stdout_lines[0] }}"

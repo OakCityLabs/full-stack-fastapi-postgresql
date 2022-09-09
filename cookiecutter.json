@@ -18,8 +18,6 @@
     "smtp_emails_from_email": "info@{{cookiecutter.domain_main}}",
 
     "postgres_password": "changethis",
-    "pgadmin_default_user": "{{cookiecutter.first_superuser}}",
-    "pgadmin_default_user_password": "{{cookiecutter.first_superuser_password}}",
 
     "traefik_constraint_tag": "{{cookiecutter.domain_main}}",
     "traefik_constraint_tag_staging": "{{cookiecutter.domain_staging}}",
@@ -34,11 +32,29 @@
     "docker_image_backend": "{{cookiecutter.docker_image_prefix}}backend",
     "docker_image_celeryworker": "{{cookiecutter.docker_image_prefix}}celeryworker",
     "docker_image_frontend": "{{cookiecutter.docker_image_prefix}}frontend",
+    "docker_image_db_dump": "{{cookiecutter.docker_image_prefix}}db_dump",
+    "docker_image_s3_backup": "{{cookiecutter.docker_image_prefix}}s3_backup",
+
+    "ecr_repo_url": "",
+
+    "production_host_1": "1.{{cookiecutter.domain_main}}",
+    "production_host_2": "2.{{cookiecutter.domain_main}}",
+    "production_host_3": "3.{{cookiecutter.domain_main}}",
+
+    "staging_host_1": "{{cookiecutter.domain_staging}}",
+
+    "production_postgres_server": "",
+
+    "ci_slack_channel": "{{cookiecutter.project_slug}}",
 
     "_copy_without_render": [
         "frontend/src/**/*.html",
         "frontend/src/**/*.vue",
         "frontend/node_modules/*",
-        "backend/app/app/email-templates/**"
+        "backend/app/app/email-templates/**",
+        "ansible/roles/*",
+        "ansible/provision.yml",
+        "ansible/deploy.yml",
+        "ansible/ansible.cfg"
     ]
 }

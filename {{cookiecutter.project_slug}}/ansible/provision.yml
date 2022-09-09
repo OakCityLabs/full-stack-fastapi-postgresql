@@ -1,0 +1,86 @@
+---
+# Install needed dependencies and ECR credentials
+- hosts: manager_nodes
+  roles:
+    - role: common
+    - role: swapfile
+    - role: docker_swarm_common
+    - role: docker_ecr
+
+# Separate manager nodes into a group of currently operational swarm manager nodes and a group that needs bootstrapping
+- hosts: manager_nodes
+  tasks:
+    - name: Get manager node info
+      community.general.docker_swarm_info:
+      register: swarm_info
+      ignore_errors: yes
+
+    - name: Gather operational manager nodes
+      add_host:
+        hostname: "{{ item }}"
+        groups: swarm_manager_operational
+      with_items: "{{ play_hosts }}"
+      when: hostvars[item].swarm_info.docker_swarm_active and hostvars[item].swarm_info.docker_swarm_manager
+      run_once: true
+    
+    - name: Gather manager nodes that need bootstrapping
+      add_host:
+        hostname: "{{ item }}"
+        groups: swarm_manager_bootstrap
+      with_items: "{{ play_hosts }}"
+      when: not hostvars[item].swarm_info.docker_swarm_active or not hostvars[item].swarm_info.docker_swarm_manager
+      run_once: true
+
+# These tasks run to initialize the swarm only if none of the managers are in a swarm already
+- hosts: swarm_manager_bootstrap[0]
+  tasks:
+    - name: Init docker swarm
+      community.general.docker_swarm:
+        advertise_addr: "{{ ansible_ssh_host }}"
+        state: present
+      when: "'swarm_manager_operational' not in groups"  # true when no nodes are currently swarm managers
+      register: bootstrap_first_node
+
+    - name: add initialized host to swarm_manager_operational group
+      add_host:
+        hostname: "{{ play_hosts[0] }}"
+        groups: swarm_manager_operational
+      when: bootstrap_first_node.changed
+
+# This grabs the swarm manager join token
+- hosts: swarm_manager_operational[0]
+  tasks:
+    - name: Get manager node info
+      community.general.docker_swarm_info:
+      register: swarm_manager_info
+
+    - name: Store swarm manager info so other swarm nodes can find the join token
+      set_fact: swarm_manager_info="{{ swarm_manager_info }}"
+
+# All managers not in the swarm join with the manager join token
+- hosts: swarm_manager_bootstrap:!swarm_manager_operational
+  tasks:
+    - name: Join the swarm cluster
+      community.docker.docker_swarm:
+        advertise_addr: "{{ ansible_ssh_host }}"
+        state: join
+        join_token: "{{ hostvars[groups['swarm_manager_operational'][0]].swarm_manager_info.swarm_facts.JoinTokens.Manager }}"
+        remote_addrs: [ "{{ hostvars[groups['swarm_manager_operational'][0]].ansible_host }}" ]
+
+# Create the stacks that run adjacent to the app. 
+# The traefik "public" stack is the external facing reverse proxy that routes incoming web traffic to the app.
+# The swarm-cronjob stack runs cron-style periodic jobs as docker service tasks
+- hosts: manager_nodes[0]
+  roles:
+    - role: traefik_stack_public
+    - role: swarm_cronjob_stack
+
+# More stacks that run adjacent to the app
+# We do it on a different node just to spread them out a bit since some of these stacks tag the node so that
+# certain services always run on the particular node with persisted volumes. For example, the swarmpit role tags the node
+# so that the services for CouchDB and Influx database always run on this specific node.
+# The swarmpit stack runs an agent on each node in the swarm and aggregates performance metrics in a web console.
+- hosts: manager_nodes[1]
+  roles:
+    - role: swarmpit_stack
+      when: include_swarmpit

@@ -1,0 +1,12 @@
+- name: Install swarm-cronjob stack yml
+  copy:
+    src: swarm_cronjob.yml
+    dest: /root/swarm_cronjob.yml
+    mode: '0440'
+
+- name: Deploy swarm_cronjob stack
+  community.general.docker_stack:
+    state: present
+    name: swarm_cronjob
+    compose:
+      - /root/swarm_cronjob.yml

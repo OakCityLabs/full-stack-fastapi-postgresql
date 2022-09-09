@@ -1,0 +1,28 @@
+- name: Create the .env file
+  template:
+    src: ../.env.template
+    dest: ~/.env
+
+- name: Copy over the docker-stack.yml file
+  copy:
+    src: ../docker-stack.yml
+    dest: ~/docker-stack.yml
+    mode: '0400'
+
+- name: Copy over the deploy script
+  copy:
+    src: ../scripts/deploy.sh
+    dest: ~/deploy.sh
+    mode: '0400'
+
+- name: Deploy docker stack
+  shell:
+    cmd: bash deploy.sh
+    chdir: ~/
+  environment:
+    TAG: "{{ app_env }}"
+    DOMAIN: "{{ domain }}"
+    APP_ENV: "{{ app_env }}"
+    TRAEFIK_TAG: "{{ domain }}"
+    STACK_NAME: "{{ docker_swarm_stack_name }}"
+    DEPLOY_ENV: "{{ app_env }}"

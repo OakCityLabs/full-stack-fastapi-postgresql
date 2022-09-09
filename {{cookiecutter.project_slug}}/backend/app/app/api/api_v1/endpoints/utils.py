@@ -11,6 +11,11 @@ from app.utils import send_test_email
 router = APIRouter()
 
 
+@router.get("/hello-world/", response_model=schemas.Msg, status_code=200)
+def hello_world() -> Any:
+    return {"msg": "Hello World"}
+
+
 @router.post("/test-celery/", response_model=schemas.Msg, status_code=201)
 def test_celery(
     msg: schemas.Msg,

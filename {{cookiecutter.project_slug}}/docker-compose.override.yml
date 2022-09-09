@@ -27,10 +27,6 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-traefik-public-http.rule=Host(`${DOMAIN?Variable not set}`)
       - traefik.http.services.${STACK_NAME?Variable not set}-traefik-public.loadbalancer.server.port=80
 
-  pgadmin:
-    ports:
-      - "5050:5050"
-
   flower:
     ports:
       - "5555:5555"
@@ -81,6 +77,27 @@ services:
       - traefik.constraint-label-stack=${TRAEFIK_TAG?Variable not set}
       - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.rule=PathPrefix(`/`)
       - traefik.http.services.${STACK_NAME?Variable not set}-frontend.loadbalancer.server.port=80
+
+  # db has to be added here since we dont want it in production, but we need it in dev
+  db:
+    image: postgres:12
+    restart: "no"
+    ports:
+      - "5433:5432"
+    volumes:
+      - app-db-data:/var/lib/postgresql/data/pgdata
+    env_file:
+      - .env
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    deploy:
+      placement:
+        constraints:
+          - node.labels.${STACK_NAME?Variable not set}.app-db-data == true
+
+# volume for db data has to be added here since we dont want it in production, but we need it in dev
+volumes:
+  app-db-data:
 
 networks:
   traefik-public:

@@ -1,0 +1,66 @@
+services:
+  proxy:
+    deploy:
+      labels:
+        - traefik.http.routers.traefik-public-healthcheck.rule=PathPrefix(`/`)
+        - traefik.http.routers.traefik-public-healthcheck.entrypoints=http
+        - traefik.http.routers.traefik-public-healthcheck.priority=1
+        - traefik.http.middlewares.healthcheck-redirectregex.redirectregex.regex=^(.*)
+        - traefik.http.middlewares.healthcheck-redirectregex.redirectregex.replacement=https://${DOMAIN?Variable not set}/api/v1/utils/hello-world/
+        - traefik.http.routers.traefik-public-healthcheck.middlewares=healthcheck-redirectregex
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-traefik-proxy
+
+  queue:
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-rabbitmq-queue
+
+  flower:
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-flower
+
+  backend:
+    deploy:
+      replicas: 2
+      placement:
+        max_replicas_per_node: 1
+      update_config:
+        parallelism: 1
+        delay: 60s
+        monitor: 30s
+        failure_action: rollback
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-fastapi-backend
+
+  frontend:
+    deploy:
+      replicas: 2
+      placement:
+        max_replicas_per_node: 1
+      update_config:
+        parallelism: 1
+        delay: 60s
+        monitor: 30s
+        failure_action: rollback
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-frontend
+
+  celeryworker:
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-celery-worker
+
+  db_dump:
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-cron-db-dump
+
+  s3_backup:
+    logging:
+      options:
+        awslogs-group: ${APP_ENV?Variable not set}-cron-s3-backup

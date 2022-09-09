@@ -1,0 +1,70 @@
+{% raw %}
+name: Deploy
+
+on:
+  push:
+    branches: [ dev, master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# One run at a time for each branch
+concurrency:
+  group: ${{ github.ref_name }}
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux, robby]
+
+    steps:
+      # Remove files that break the checkout step
+      - name: Remove any files in the checkout directory owned by root (presumably put there by docker)
+        run: sudo find . -group root -exec rm -rf {} \; || true
+
+      - uses: actions/checkout@v2
+
+      - name: Run linter and tests
+        run: |
+          cp .env.example .env
+          sh scripts/test.sh
+
+      - name: Get deploy env
+        run: |
+          if [ $REF_NAME == 'master' ]
+          then
+              echo "DEPLOY_ENV=production" >> $GITHUB_ENV
+          elif [ $REF_NAME == 'dev' ]
+          then
+              echo "DEPLOY_ENV=staging" >> $GITHUB_ENV
+          else
+              echo "DEPLOY_ENV=''" >> $GITHUB_ENV
+          fi
+        env:
+          REF_NAME: ${{ github.ref_name }}
+
+      - name: Deploy
+        run: |
+          source /home/teamcity/miniconda3/etc/profile.d/conda.sh
+          conda activate base
+          cd ansible
+          make deploy_${DEPLOY_ENV,,}
+        env:
+          # Inject secret values to environment variables
+          AWS_ACCESS_KEY_ID: ${{ secrets['AWS_ACCESS_KEY_ID'] }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets['AWS_SECRET_ACCESS_KEY'] }}
+          SECRET_KEY: ${{ secrets[format('SECRET_KEY_{0}', env.DEPLOY_ENV)] }}
+          FIRST_SUPERUSER_PASSWORD: ${{ secrets[format('FIRST_SUPERUSER_PASSWORD_{0}', env.DEPLOY_ENV)] }}
+          POSTGRES_PASSWORD: ${{ secrets[format('POSTGRES_PASSWORD_{0}', env.DEPLOY_ENV)] }}
+
+      - name: Slack Notify
+        uses: act10ns/slack@v1
+        with:
+          status: ${{ job.status }}
+          steps: ${{ toJson(steps) }}
+{% endraw %}
+          channel: '#{{ cookiecutter.ci_slack_channel }}'
+{% raw %}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: always()
+{% endraw %}

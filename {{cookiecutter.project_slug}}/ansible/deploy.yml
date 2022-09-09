@@ -1,0 +1,38 @@
+- hosts: localhost
+  connection: local
+  become: false
+  tasks:
+    - name: Create the .env file
+      template:
+        src: ../.env.template
+        dest: ../.env
+
+    - name: Log in to AWS ECR
+      shell: aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin {{ ecr_repo_url }}
+
+    - name: Build application images and push to ECR
+      shell:
+        cmd: bash scripts/build-push.sh
+        chdir: ../
+      environment:
+        TAG: "{{ app_env }}"
+        DOMAIN: "{{ domain }}"
+        APP_ENV: "{{ app_env }}"
+        FRONTEND_ENV: "{{ frontend_env }}"
+
+    - name: Build docker-stack.yml for application
+      shell:
+        cmd: bash scripts/create-stack-config.sh
+        chdir: ../
+      environment:
+        TAG: "{{ app_env }}"
+        DOMAIN: "{{ domain }}"
+        APP_ENV: "{{ app_env }}"
+        FRONTEND_ENV: "{{ frontend_env }}"
+        TRAEFIK_TAG: "{{ domain }}"
+        STACK_NAME: "{{ docker_swarm_stack_name }}"
+        DEPLOY_ENV: "{{ app_env }}"
+
+- hosts: manager_nodes[0]
+  roles:
+    - docker_stack_deploy

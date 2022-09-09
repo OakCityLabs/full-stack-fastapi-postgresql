@@ -1,0 +1,16 @@
+all:
+  hosts:
+    manager_node_1:
+      ansible_host: {{ cookiecutter.staging_host_1 }}
+  children:
+    manager_nodes:
+      hosts:
+        manager_node_1:
+  vars:
+    app_env: "staging"
+    frontend_env: "staging"
+    domain: "{{ cookiecutter.domain_staging }}"
+    docker_swarm_stack_name: "{{ cookiecutter.docker_swarm_stack_name_staging }}"
+    traefik_ssl: true
+    include_swarmpit: false
+    postgres_server: "db"

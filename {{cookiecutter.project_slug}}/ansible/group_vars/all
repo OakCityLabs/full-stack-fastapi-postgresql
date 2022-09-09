@@ -1,0 +1,24 @@
+app_name: "{{ cookiecutter.project_slug }}"
+
+swap_file_path: "/swapfile"
+swap_file_size_gb: "4"
+
+{% raw %}
+secret_key: "{{ lookup('env', 'SECRET_KEY') }}"
+{% endraw %}
+first_superuser: "{{ cookiecutter.first_superuser }}"
+{% raw %}
+first_superuser_password: "{{ lookup('env', 'FIRST_SUPERUSER_PASSWORD') }}"
+
+postgres_user: "postgres"
+postgres_password: "{{ lookup('env', 'POSTGRES_PASSWORD') }}"
+postgres_db: "app"
+{% endraw %}
+emails_from_email: "{{ cookiecutter.smtp_emails_from_email }}"
+
+ecr_repo_url: "{{ cookiecutter.ecr_repo_url }}"
+docker_image_backend: "{% raw %}{{ ecr_repo_url }}{% endraw %}/{{ cookiecutter.docker_image_backend }}"
+docker_image_celeryworker: "{% raw %}{{ ecr_repo_url }}{% endraw %}/{{ cookiecutter.docker_image_celeryworker }}"
+docker_image_frontend: "{% raw %}{{ ecr_repo_url }}{% endraw %}/{{ cookiecutter.docker_image_frontend }}"
+docker_image_db_dump: "{% raw %}{{ ecr_repo_url }}{% endraw %}/{{ cookiecutter.docker_image_db_dump }}"
+docker_image_s3_backup: "{% raw %}{{ ecr_repo_url }}{% endraw %}/{{ cookiecutter.docker_image_s3_backup }}"

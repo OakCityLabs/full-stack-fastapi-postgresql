@@ -1,0 +1,23 @@
+- name: Install packages
+  apt:
+    name: ['amazon-ecr-credential-helper']
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Make sure .docker dir exists
+  file:
+    path: ~/.docker
+    state: directory
+
+- name: Install docker config.json config
+  template:
+    src: config.json.j2
+    dest: ~/.docker/config.json
+  register: docker_config
+
+- name: Restart docker deamon
+  service:
+    name: docker
+    state: restarted
+  when: docker_config.changed  
